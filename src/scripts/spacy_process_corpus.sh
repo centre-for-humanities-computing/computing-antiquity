@@ -13,6 +13,6 @@ pip install "tqdm>=4.65.0,<4.66.0"
 pip install "wandb>=0.13.0,<0.14.0"
 pip install "plotly>=5.13.0,<5.14.0"
 
-python3 src/textual_preprocessing/process_corpus.py
+nohup python3 -u src/textual_preprocessing/process_corpus.py &
 
 deactivate
