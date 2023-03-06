@@ -8,6 +8,7 @@ from tqdm import tqdm
 
 PARSED_PATH = "/work/data_wrangling/dat/greek/parsed_data/"
 
+
 def stream_docs(index_df: pd.DataFrame) -> Iterable[Dict[str, str]]:
     """Streams doc ids and textual content for the whole corpus."""
     for index, row in index_df.iterrows():
@@ -15,6 +16,7 @@ def stream_docs(index_df: pd.DataFrame) -> Iterable[Dict[str, str]]:
             text = in_file.read()
         document = {"document_id": row.document_id, "text": text}
         yield document
+
 
 def main() -> None:
     print("Loading index")

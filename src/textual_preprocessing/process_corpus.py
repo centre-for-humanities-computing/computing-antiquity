@@ -1,19 +1,22 @@
 """Script responsible for cleaning the corpus."""
-import subprocess
-from typing import List
-import os
 import glob
+import os
+import subprocess
+from pathlib import Path
+from typing import List
 
 import pandas as pd
-import spacy
-import wandb
-from wandb.data_types import Plotly
 import plotly.graph_objects as go
-
+import spacy
+from spacy.tokens import Doc, DocBin
+from tqdm import tqdm
 from utils.streams import stream_files
+from wandb.data_types import Plotly
 
-PARSED_INDEX_PATH = "/work/data_wrangling/dat/greek/parsed_data/index.csv"
-OUT_PATH = "/work/data_wrangling/dat/greek/clean_data/"
+import wandb
+
+PARSED_INDEX_PATH = "dat/greek/parsed_data/index.csv"
+OUT_PATH = "dat/greek/clean_data/"
 
 
 def get_done_ids(path: str) -> List[str]:
@@ -39,23 +42,9 @@ def progress_piechart(n_processed: int, n_total: int) -> go.Figure:
 MAX_LENGTH = 10**6
 
 
-def process_document(
-    text: str, nlp: spacy.Language
-) -> spacy.tokens.Doc:
+def process_document(text: str, nlp: spacy.Language) -> Doc:
     """Turns text into a spaCy document.
-    If the text is too long it is broken into pieces and processed that way.
-
-    Parameters
-    ----------
-    text: str
-        The raw text.
-    nlp: spacy.Language
-        SpaCy Language object for processing.
-
-    Returns
-    -------
-    spacy.tokens.Doc
-        SpaCy document object.
+    If the text is too long it is broken into lines and processed that way.
     """
     if len(text) > MAX_LENGTH:
         # If the text is too long, it's broken into its lines.
@@ -66,14 +55,83 @@ def process_document(
     return spacy.tokens.Doc.from_docs(docs)
 
 
+TOKEN_ATTRS = [
+    "IS_ALPHA",
+    "IS_ASCII",
+    "IS_DIGIT",
+    "IS_LOWER",
+    "IS_PUNCT",
+    "IS_SPACE",
+    "IS_TITLE",
+    "IS_UPPER",
+    "LIKE_URL",
+    "LIKE_NUM",
+    "LIKE_EMAIL",
+    "IS_STOP",
+    "IS_QUOTE",
+    "IS_LEFT_PUNCT",
+    "IS_RIGHT_PUNCT",
+    "IS_CURRENCY",
+    "ID",
+    "ORTH",
+    "LOWER",
+    "NORM",
+    "SHAPE",
+    "PREFIX",
+    "SUFFIX",
+    "LENGTH",
+    "LEMMA",
+    "POS",
+    "TAG",
+    "DEP",
+    "ENT_IOB",
+    "ENT_TYPE",
+    "ENT_ID",
+    "ENT_KB_ID",
+    "HEAD",
+    "SENT_START",
+    "SPACY",
+    "LANG",
+    "MORPH",
+    "IDX",
+]
+
+
+def save_document(doc: Doc, dest: str) -> None:
+    """Serializes and saves spaCy Document."""
+    doc_bin = DocBin(attrs=TOKEN_ATTRS, docs=[doc])
+    doc_bin.to_disk(dest)
+
+
+MODEL_NAME = "grc_dep_treebanks_trf"
+MODEL_CREATOR_NAME = "janko"
+
+
 def main():
+    print(
+        "--------------------------\n"
+        "------PROCESS CORPUS------\n"
+        "--------------------------\n"
+    )
+    # Creating destination directory
+    Path(OUT_PATH).mkdir(exist_ok=True, parents=True)
+
     # Logging into wandb for logging
+    print("Logging into Wandb:")
     subprocess.call(["python3", "-m", "wandb", "login"])
     wandb.init(project="greek-spacy-cleaning", entity="kardosdrur")
 
+    # Downloading spaCy model
+    print(f"Downloading model {MODEL_CREATOR_NAME}\{MODEL_NAME}")
+    model_source = (
+        f"https://huggingface.co/{MODEL_CREATOR_NAME}/"
+        f"{MODEL_NAME}/resolve/main/{MODEL_NAME}-any-py3-none-any.whl"
+    )
+    subprocess.call(["python3", "-m", "pip", "install", model_source])
+
     # Loading model
     print("Loading NLP model")
-    nlp = spacy.load("grc_ud_proiel_trf")
+    nlp = spacy.load(MODEL_NAME)
     # Resetting max length
     nlp.max_length = 10**8
 
@@ -103,9 +161,8 @@ def main():
 
     # Saving SpaCy documents
     for doc_out_path, text, n_processed in zip(
-        doc_filenames, texts, range(n_left)
+        tqdm(doc_filenames), texts, range(n_left)
     ):
-        print(f" - Producing: {doc_out_path}")
         # Logging progress to Weights and Biases
         wandb.log(
             {
@@ -116,7 +173,7 @@ def main():
             }
         )
         doc = process_document(text, nlp=nlp)
-        doc.to_disk(doc_out_path)
+        save_document(doc, dest=doc_out_path)
 
     # Creating and saving index for cleaned documents
     index = pd.DataFrame(
@@ -128,6 +185,7 @@ def main():
     )
     print("Saving index")
     index.to_csv(os.path.join(OUT_PATH, "index.csv"))
+    print("DONE")
 
 
 if __name__ == "__main__":

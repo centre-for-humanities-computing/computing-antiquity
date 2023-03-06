@@ -5,6 +5,12 @@ src/preprocessing.zip
 # Keys
 */**/*.key
 
+# Wandb logs
+wandb/
+
+# Environments
+environments/
+
 # Deprecated stuff
 */**/deprecated/
 

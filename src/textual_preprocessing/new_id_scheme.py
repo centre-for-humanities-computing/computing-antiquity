@@ -1,3 +1,4 @@
+"""This was a file to set up the new ID scheme for the corpus, this file will no longer be used."""
 # %%
 import os
 import shutil

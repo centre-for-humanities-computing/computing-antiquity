@@ -1,12 +1,10 @@
-# %%
 from typing import List
-import os
 
 import pandas as pd
 import spacy
 from utils.nlp.greek import normalize
 
-# %%
+
 def token_filter(token: spacy.tokens.Token, filter_stops: bool = True) -> bool:
     return (
         not (token.is_stop and filter_stops)
@@ -78,10 +76,8 @@ def join_sentences(sentences: List[List[str]]) -> str:
     return "\n".join(" ".join(sentence) for sentence in sentences)
 
 
-# %%
 MARK_PATH = "/work/data_wrangling/dat/greek/clean_data/SEPA_NA28-041MRK"
 
-# %%
 mark_with_stopwords = join_sentences(
     doc_path_to_sentences(MARK_PATH, filter_stops=False)
 )
@@ -89,16 +85,12 @@ mark_without_stopwords = join_sentences(
     doc_path_to_sentences(MARK_PATH, filter_stops=True)
 )
 
-# %%
 mark_without_stopwords
 
-# %%
 doc = spacy.tokens.Doc(spacy.vocab.Vocab()).from_disk(MARK_PATH)
 
-# %%
 doc
 
-# %%
 records = []
 for token in doc:
     if normalize(token.text, keep_sentences=False).strip():
@@ -115,9 +107,6 @@ for token in doc:
         )
 df = pd.DataFrame.from_records(records)
 
-# %%
 df
-# %%
-df.to_csv("mark_spacy.csv")
 
-# %%
+df.to_csv("mark_spacy.csv")

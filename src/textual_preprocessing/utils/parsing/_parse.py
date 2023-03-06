@@ -1,11 +1,11 @@
 """Module for defining parsers for the project."""
 import os
 import pathlib
-from typing import Protocol, TypedDict, Iterable
+from typing import Iterable, Protocol, TypedDict
 
-from IPython.display import clear_output
 import pandas as pd
 from lxml import etree
+from tqdm import tqdm
 
 
 class Document(TypedDict):
@@ -33,10 +33,9 @@ def out_filename(doc: Document) -> str:
     return f"{doc['id']}.txt"
 
 
-DEST_DIR = "/work/data_wrangling/dat/greek/parsed_data/"
-
-
-def process_files(paths: Iterable[str], parser: Parser, source_name: str):
+def process_files(
+    paths: Iterable[str], parser: Parser, source_name: str, dest: str
+):
     """Parses the given file and puts it in the output folder.
     The output folder will also have an index.csv file with ids
     and information about source and destination files.
@@ -49,33 +48,33 @@ def process_files(paths: Iterable[str], parser: Parser, source_name: str):
         Parser object to parse the files into documents.
     source_name: str
         Name of the source project. (e.g. perseus)
+    dest: str
+        Destination folder.
 
     Note
     ----
     This function doesn't stop if it encounters corrupted files,
     but lists them in a corrput_files.log file in the output directory.
     """
-    out_dir = os.path.join(DEST_DIR, source_name)
+    out_dir = os.path.join(dest, source_name)
     # Creating directory if it doesn't exist
     pathlib.Path(out_dir).mkdir(parents=True, exist_ok=True)
     corrupt_path = os.path.join(out_dir, "corrupt_files.log")
     index_records = []
     with open(corrupt_path, "w") as f:
         f.write("")
-    for path in paths:
-        clear_output(wait=True)
-        print(f"processing: {path}")
+    for path in tqdm(paths):
         try:
             docs = list(parser.parse_file(path))
             # NOTE: This error is implementation detail and should be hidden
             # by the Parser interface
         except etree.XMLSyntaxError:
-            with open(corrupt_path, "a") as f:
+            with open(corrupt_path, "a", encoding="utf-8") as f:
                 f.write(path + "\n")
             continue
         for doc in docs:
             out_path = os.path.join(out_dir, out_filename(doc))
-            with open(out_path, "w") as f:
+            with open(out_path, "w", encoding="utf-8") as f:
                 f.write(doc["text"])
             doc_index = dict(
                 src_path=path,

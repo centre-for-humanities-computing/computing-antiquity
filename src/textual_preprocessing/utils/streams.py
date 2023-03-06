@@ -1,9 +1,8 @@
 """Module for streaming utilities"""
 import os
 import random
-from typing import Callable, Iterable, List, Optional, TypeVar, Sequence
-
 from itertools import islice
+from typing import Callable, Iterable, List, Optional, Sequence, TypeVar
 
 
 def reusable(gen_func: Callable) -> Callable:
@@ -113,12 +112,11 @@ def stream_files(
     """
     for path in paths:
         try:
-            with open(path, "r") as in_file:
+            with open(path, "r", encoding="utf-8") as in_file:
                 contents = in_file.read()
             yield contents
         except FileNotFoundError as e:
             if tolerate_failure:
-                print(f"Couldn't read file: {path}, yielding empty string.")
                 yield ""
             else:
                 raise e
