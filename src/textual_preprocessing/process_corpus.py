@@ -129,6 +129,9 @@ def main():
     )
     subprocess.call(["python3", "-m", "pip", "install", model_source])
 
+    # Requiring GPU with spaCy
+    spacy.require_gpu()
+
     # Loading model
     print("Loading NLP model")
     nlp = spacy.load(MODEL_NAME)
