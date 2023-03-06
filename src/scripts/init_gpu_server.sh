@@ -8,4 +8,4 @@ sudo apt install zip unzip git-lfs -y
 # python util
 sudo apt install python3-pip python3-venv -y
 # restart
-sudo restart
+sudo reboot
