@@ -3,6 +3,7 @@ mkdir -p environments
 python3 -m venv environments/processing
 
 source environments/processing/bin/activate
+pip install "numpy<1.24.0"
 pip install torch==1.8.1+cu101 -f https://download.pytorch.org/whl/torch_stable.html
 pip install spacy[cuda101]
 pip install --upgrade torch
