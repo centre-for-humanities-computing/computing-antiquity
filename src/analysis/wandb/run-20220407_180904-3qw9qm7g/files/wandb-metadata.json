@@ -1,0 +1,16 @@
+{
+    "os": "Linux-5.4.173.el7-x86_64-with-glibc2.31",
+    "python": "3.9.10",
+    "heartbeatAt": "2022-04-07T16:09:08.890683",
+    "startedAt": "2022-04-07T16:09:04.823529",
+    "docker": null,
+    "cpu_count": 64,
+    "cuda": null,
+    "args": [],
+    "state": "running",
+    "program": "/work/data_wrangling/src/classification/train_lstm.py",
+    "codePath": "train_lstm.py",
+    "host": "j-64242-job-0",
+    "username": "ucloud",
+    "executable": "/work/data_wrangling/src/environments/modern_env/bin/python3"
+}
