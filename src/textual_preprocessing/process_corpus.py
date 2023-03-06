@@ -157,7 +157,9 @@ def main():
     # Getting document ids from index
     doc_ids = parsed_index.document_id
     # Producing output file names
-    doc_filenames = doc_ids.map(lambda doc_id: os.path.join(OUT_PATH, doc_id))
+    doc_filenames = doc_ids.map(
+        lambda doc_id: os.path.join(OUT_PATH, f"{doc_id}.spacy")
+    )
 
     # Saving SpaCy documents
     for doc_out_path, text, n_processed in zip(
