@@ -17,6 +17,7 @@ import wandb
 
 PARSED_INDEX_PATH = "dat/greek/parsed_data/index.csv"
 OUT_PATH = "dat/greek/clean_data/"
+MAX_LENGTH = 10**4
 
 
 def get_done_ids(path: str) -> List[str]:
@@ -37,9 +38,6 @@ def progress_piechart(n_processed: int, n_total: int) -> go.Figure:
         ]
     )
     return fig
-
-
-MAX_LENGTH = 10**6
 
 
 def process_document(text: str, nlp: spacy.Language) -> Doc:
