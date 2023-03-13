@@ -9,6 +9,7 @@ For fetching and parsing the corpus run:
 
 ```bash
 bash src/scripts/get_corpus.py
+bash src/scripts/parse_corpus.py
 ```
 
 > Note that some Septuigant texts do not get fetched by the scripts
