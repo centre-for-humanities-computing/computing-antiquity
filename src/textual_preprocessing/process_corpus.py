@@ -64,7 +64,7 @@ def get_done_ids(path: str) -> List[str]:
     """Finds documents that have already been cleaned"""
     paths = glob.glob(os.path.join(path, "*"))
     filenames = [path.split("/")[-1] for path in paths]
-    ids = [filename.removesuffix(".spacy") for filename in filenames]
+    ids = [filename.split(".")[0] for filename in filenames]
     return ids
 
 
