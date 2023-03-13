@@ -1,5 +1,7 @@
 """Script responsible for cleaning the corpus."""
+import argparse
 import glob
+import multiprocessing
 import os
 import subprocess
 from pathlib import Path
@@ -8,50 +10,15 @@ from typing import List
 import pandas as pd
 import plotly.graph_objects as go
 import spacy
+import wandb
 from spacy.tokens import Doc, DocBin
 from tqdm import tqdm
 from utils.streams import stream_files
 from wandb.data_types import Plotly
 
-import wandb
-
 PARSED_INDEX_PATH = "dat/greek/parsed_data/index.csv"
 OUT_PATH = "dat/greek/clean_data/"
 MAX_LENGTH = 10**4
-
-
-def get_done_ids(path: str) -> List[str]:
-    """Finds documents that have already been cleaned"""
-    paths = glob.glob(os.path.join(path, "*"))
-    ids = [path.split("/")[-1] for path in paths]
-    return ids
-
-
-def progress_piechart(n_processed: int, n_total: int) -> go.Figure:
-    """Draws piechart of progress"""
-    fig = go.Figure(
-        data=[
-            go.Pie(
-                labels=["done", "left"],
-                values=[n_processed, n_total - n_processed],
-            )
-        ]
-    )
-    return fig
-
-
-def process_document(text: str, nlp: spacy.Language) -> Doc:
-    """Turns text into a spaCy document.
-    If the text is too long it is broken into lines and processed that way.
-    """
-    if len(text) > MAX_LENGTH:
-        # If the text is too long, it's broken into its lines.
-        texts = text.split("\n")
-    else:
-        texts = [text]
-    docs = list(nlp.pipe(texts))
-    return spacy.tokens.Doc.from_docs(docs)
-
 
 TOKEN_ATTRS = [
     "IS_ALPHA",
@@ -95,10 +62,82 @@ TOKEN_ATTRS = [
 ]
 
 
+def get_done_ids(path: str) -> List[str]:
+    """Finds documents that have already been cleaned"""
+    paths = glob.glob(os.path.join(path, "*"))
+    filenames = [path.split("/")[-1] for path in paths]
+    ids = [filename.removesuffix(".spacy") for filename in filenames]
+    return ids
+
+
+def progress_piechart(n_processed: int, n_total: int) -> go.Figure:
+    """Draws piechart of progress"""
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=["done", "left"],
+                values=[n_processed, n_total - n_processed],
+            )
+        ]
+    )
+    return fig
+
+
 def save_document(doc: Doc, dest: str) -> None:
     """Serializes and saves spaCy Document."""
     doc_bin = DocBin(attrs=TOKEN_ATTRS, docs=[doc])
     doc_bin.to_disk(dest)
+
+
+def process_document(text: str, nlp: spacy.Language, dest: str) -> None:
+    """Turns text into a spaCy document.
+    If the text is too long it is broken into lines and processed that way.
+    """
+    if len(text) > MAX_LENGTH:
+        # If the text is too long, it's broken into its lines.
+        texts = text.split("\n")
+    else:
+        texts = [text]
+    docs = list(nlp.pipe(texts))
+    doc = spacy.tokens.Doc.from_docs(docs)
+    save_document(doc, dest=dest)
+
+
+def process_doc_in_subprocess(
+    text: str, nlp: spacy.Language, dest: str
+) -> None:
+    """Runs processing in subprocess and then
+    deletes that subprocess to free up all memory.
+    This is needed because spaCy slowly fills up
+    CUDA's memory for some reason.
+    Blocks execution so that no other subprocesses are started
+    (Because CUDA would act very strange.)
+    """
+    with multiprocessing.Manager():
+        process = multiprocessing.Process(
+            target=process_document,
+            kwargs={"text": text, "nlp": nlp, "dest": dest},
+        )
+        process.start()
+        process.join()
+
+
+def create_parser() -> argparse.ArgumentParser:
+    """Creates parser for the CLI."""
+    parser = argparse.ArgumentParser(
+        prog="Corpus processor",
+        description="Processes all documents in a corpus on GPU",
+    )
+    parser.add_argument("--model", type=str, default="grc_dep_treebanks_trf")
+    parser.add_argument("--dest", type=str, default="dat/greek/clean_data/")
+    parser.add_argument(
+        "--src_index", type=str, default="dat/greek/parsed_data/index.csv"
+    )
+    parser.add_argument("--wandb_user", type=str, default="kardosdrur")
+    parser.add_argument(
+        "--wandb_project", type=str, default="greek-spacy-cleaning"
+    )
+    return parser
 
 
 MODEL_NAME = "grc_dep_treebanks_trf"
@@ -106,43 +145,38 @@ MODEL_CREATOR_NAME = "janko"
 
 
 def main():
+    parser = create_parser()
+    args = parser.parse_args()
     print(
         "--------------------------\n"
         "------PROCESS CORPUS------\n"
         "--------------------------\n"
     )
+
     # Creating destination directory
-    Path(OUT_PATH).mkdir(exist_ok=True, parents=True)
+    print(f"Creating destination directory ({args.dest})")
+    Path(args.dest).mkdir(exist_ok=True, parents=True)
 
     # Logging into wandb for logging
-    print("Logging into Wandb:")
-    subprocess.call(["python3", "-m", "wandb", "login"])
-    wandb.init(project="greek-spacy-cleaning", entity="kardosdrur")
-
-    # Downloading spaCy model
-    print(f"Downloading model {MODEL_CREATOR_NAME}\{MODEL_NAME}")
-    model_source = (
-        f"https://huggingface.co/{MODEL_CREATOR_NAME}/"
-        f"{MODEL_NAME}/resolve/main/{MODEL_NAME}-any-py3-none-any.whl"
-    )
-    subprocess.call(["python3", "-m", "pip", "install", model_source])
+    print("Initialising wandb")
+    wandb.init(project=args.wandb_project, entity=args.wandb_user)
 
     # Requiring GPU with spaCy
     spacy.require_gpu()
 
     # Loading model
     print("Loading NLP model")
-    nlp = spacy.load(MODEL_NAME)
+    nlp = spacy.load(args.model)
     # Resetting max length
-    nlp.max_length = 10**8
+    nlp.max_length = MAX_LENGTH
 
     # Loading Index
     print("Loading index of parsed files")
-    parsed_index = pd.read_csv(PARSED_INDEX_PATH, index_col=0)
+    parsed_index = pd.read_csv(args.src_index, index_col=0)
     n_total = len(parsed_index.index)
 
     # Removing texts from the index that have already been cleaned
-    done_ids = get_done_ids(OUT_PATH)
+    done_ids = get_done_ids(args.dest)
     done = parsed_index.document_id.isin(done_ids)
     n_done = done.sum()
     print(f"Ignoring previously completed documents (N={n_done})")
@@ -159,7 +193,7 @@ def main():
     doc_ids = parsed_index.document_id
     # Producing output file names
     doc_filenames = doc_ids.map(
-        lambda doc_id: os.path.join(OUT_PATH, f"{doc_id}.spacy")
+        lambda doc_id: os.path.join(args.dest, f"{doc_id}.spacy")
     )
 
     # Saving SpaCy documents
@@ -175,8 +209,7 @@ def main():
                 ),
             }
         )
-        doc = process_document(text, nlp=nlp)
-        save_document(doc, dest=doc_out_path)
+        process_doc_in_subprocess(text, nlp=nlp, dest=doc_out_path)
 
     # Creating and saving index for cleaned documents
     index = pd.DataFrame(
