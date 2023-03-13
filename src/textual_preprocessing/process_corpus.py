@@ -9,6 +9,7 @@ from typing import List
 import pandas as pd
 import plotly.graph_objects as go
 import spacy
+import torch
 import wandb
 from spacy.tokens import Doc, DocBin
 from tqdm import tqdm
@@ -90,6 +91,7 @@ def process_document(text: str, nlp: spacy.Language, dest: str) -> None:
     """Turns text into a spaCy document.
     If the text is too long it is broken into lines and processed that way.
     """
+    torch.set_num_threads(1)
     if len(text) > MAX_LENGTH:
         # If the text is too long, it's broken into its lines.
         texts = text.split("\n")
@@ -189,6 +191,10 @@ def main():
         lambda doc_id: os.path.join(args.dest, f"{doc_id}.spacy")
     )
 
+    # Setting multiprocessing to 'spawn' because of
+    # a bug in torch https://github.com/pytorch/pytorch/issues/17199
+    multiprocessing.set_start_method("spawn")
+    torch.set_num_threads(1)
     # Saving SpaCy documents
     for doc_out_path, text, n_processed in zip(
         tqdm(doc_filenames), texts, range(n_left)
