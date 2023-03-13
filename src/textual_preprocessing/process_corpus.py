@@ -3,7 +3,6 @@ import argparse
 import glob
 import multiprocessing
 import os
-import subprocess
 from pathlib import Path
 from typing import List
 
@@ -16,8 +15,6 @@ from tqdm import tqdm
 from utils.streams import stream_files
 from wandb.data_types import Plotly
 
-PARSED_INDEX_PATH = "dat/greek/parsed_data/index.csv"
-OUT_PATH = "dat/greek/clean_data/"
 MAX_LENGTH = 10**4
 
 TOKEN_ATTRS = [
@@ -140,10 +137,6 @@ def create_parser() -> argparse.ArgumentParser:
     return parser
 
 
-MODEL_NAME = "grc_dep_treebanks_trf"
-MODEL_CREATOR_NAME = "janko"
-
-
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -220,7 +213,7 @@ def main():
         }
     )
     print("Saving index")
-    index.to_csv(os.path.join(OUT_PATH, "index.csv"))
+    index.to_csv(os.path.join(args.dest, "index.csv"))
     print("DONE")
 
 
