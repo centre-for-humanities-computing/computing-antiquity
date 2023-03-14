@@ -1,11 +1,11 @@
-"""This was a file to set up the new ID scheme for the corpus, this file will no longer be used."""
+"""LEGACY FILE, IT IS NO LONGER ACTIVELY USED AND SHOULD BE IGNORED"""
 # %%
 import os
-import shutil
 import re
-import pandas as pd
-import numpy as np
+import shutil
 
+import numpy as np
+import pandas as pd
 from utils.metadata import fetch_metadata
 
 # %%
