@@ -1,13 +1,13 @@
+"""DEPRECATED: PLEASE DO NOT USE IN FUTURE CODE"""
 import re
-import unicodedata as ud
 import string
+import unicodedata as ud
 from typing import List
 
 import cltk
 import cltk.alphabet.grc.grc as alphabet
 from cltk.lemmatize.grc import GreekBackoffLemmatizer
-
-from utils.text import remove_punctuation, only_dots
+from utils.text import only_dots, remove_punctuation
 
 cltk.data.fetch.FetchCorpus(language="grc").import_corpus("grc_models_cltk")
 
