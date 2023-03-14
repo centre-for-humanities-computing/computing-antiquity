@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 import spacy
 import torch
 import wandb
+from spacy.language import Language
 from spacy.tokens import Doc, DocBin
 from tqdm import tqdm
 from utils.streams import stream_files
@@ -91,7 +92,7 @@ def save_document(doc: Doc, dest: str) -> None:
     doc_bin.to_disk(dest)
 
 
-def process_document(text: str, nlp: spacy.Language, dest: str) -> None:
+def process_document(text: str, nlp: Language, dest: str) -> None:
     """Turns text into a spaCy document.
     If the text is too long it is broken into lines and processed that way.
     """
@@ -102,13 +103,11 @@ def process_document(text: str, nlp: spacy.Language, dest: str) -> None:
     else:
         texts = [text]
     docs = list(nlp.pipe(texts))
-    doc = spacy.tokens.Doc.from_docs(docs)
+    doc = Doc.from_docs(docs)
     save_document(doc, dest=dest)
 
 
-def process_doc_in_subprocess(
-    text: str, nlp: spacy.Language, dest: str
-) -> None:
+def process_doc_in_subprocess(text: str, nlp: Language, dest: str) -> None:
     """Runs processing in subprocess and then
     deletes that subprocess to free up all memory.
     This is needed because spaCy slowly fills up
