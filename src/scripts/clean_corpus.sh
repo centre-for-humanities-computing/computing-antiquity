@@ -10,6 +10,6 @@ MODEL_SOURCE="https://huggingface.co/${MODEL_CREATOR_NAME}/${MODEL_NAME}/resolve
 echo "Downloading model ${MODEL_CREATOR_NAME}/${MODEL_NAME}"
 python3 -m pip install $MODEL_SOURCE
 
-python3 src/textual_preprocessing/clean_corpus.py --model $MODEL_NAME --dest $DEST_PATH --src_index $SRC_INDEX
+python3 src/textual_preprocessing/clean_corpus.py --model $MODEL_NAME --dest $DEST_PATH --src_index $PROCESSED_INDEX
 
 deactivate

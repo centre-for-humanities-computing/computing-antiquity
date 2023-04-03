@@ -2,7 +2,7 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Iterable, List
+from typing import Iterable, List, Literal, Optional, Set
 
 import pandas as pd
 import spacy
@@ -13,6 +13,26 @@ from spacy.tokens import Doc, DocBin, Token
 INDEX_PATH = "dat/greek/processed_data/index.csv"
 IN_DIR = "dat/greek/processed_data"
 OUT_DIR = "dat/greek/cleaned_data"
+
+UPOSTag = Literal[
+    "ADJ",
+    "ADP",
+    "ADV",
+    "AUX",
+    "CCONJ",
+    "DET",
+    "INTJ",
+    "NOUN",
+    "NUM",
+    "PART",
+    "PRON",
+    "PROPN",
+    "PUNCT",
+    "SCONJ",
+    "SYM",
+    "VERB",
+    "X",
+]
 
 
 def is_latin(char: str) -> bool:
@@ -28,20 +48,34 @@ def contains_latin(text: str) -> bool:
     return any(map(is_latin, text))
 
 
-def is_acceptable(token: Token, remove_stopwords: bool) -> bool:
+def is_acceptable(
+    token: Token, remove_stopwords: bool, upos_tags: Set[UPOSTag]
+) -> bool:
     """Checks if a token can be accepted for further processing"""
     return (
+        # We don't keep punctuation
         not token.is_punct
+        # All characters gotta be alphabetical in the token
         and token.is_alpha
+        # We don't take no digits
         and not token.is_digit
+        # Nor whitespace tokens
         and not token.is_space
+        # Only keep stopwords if remove_stopwords is false
         and not (remove_stopwords and token.is_stop)
+        # We don't accept tokens that contain Latin characters
         and not (contains_latin(token.norm_))
+        # If UPOS tags is empty, then it's acceptable,
+        # otherwise it only is, when the token's POS tag is in the provided set
+        and (not upos_tags or (token.pos_ in upos_tags))
     )
 
 
 def extract_normalized_sentences(
-    doc: Doc, remove_stopwords: bool, lemmatize: bool
+    doc: Doc,
+    remove_stopwords: bool,
+    lemmatize: bool,
+    upos_tags: Set[UPOSTag],
 ) -> List[List[str]]:
     """Extracts normalized sentences from the document in the form of
     list of lists of tokens.
@@ -53,7 +87,9 @@ def extract_normalized_sentences(
         for token in sent:
             # We check if the token is acceptable according to the rules
             # we outlined
-            if is_acceptable(token, remove_stopwords=remove_stopwords):
+            if is_acceptable(
+                token, remove_stopwords=remove_stopwords, upos_tags=upos_tags
+            ):
                 if lemmatize:
                     result_sentence.append(token.lemma_)
                 else:
@@ -126,6 +162,7 @@ def clean_corpus(
     lemmatize: bool,
     remove_stopwords: bool,
     nlp: Language,
+    upos_tags: Optional[Set[UPOSTag]] = None,
 ) -> pd.DataFrame:
     """Cleans corpus and turns it into a dataframe where document IDs
     are linked to the cleaned text."""
@@ -137,7 +174,10 @@ def clean_corpus(
         try:
             doc = load_doc(path, nlp=nlp)
             sentences = extract_normalized_sentences(
-                doc, remove_stopwords=remove_stopwords, lemmatize=lemmatize
+                doc,
+                remove_stopwords=remove_stopwords,
+                lemmatize=lemmatize,
+                upos_tags=upos_tags or set(),
             )
             text = join_sentences(sentences)
             texts.append(text)
@@ -200,6 +240,20 @@ def main() -> None:
         ids, paths, lemmatize=True, remove_stopwords=True, nlp=nlp
     )
     corpus.to_csv(os.path.join(args.dest, "lemmatized_without_stopwords.csv"))
+
+    corpus.to_csv(os.path.join(args.dest, "lemmatized_with_stopwords.csv"))
+    print(" 5. Lemmatized without stopwords, nouns only.")
+    corpus = clean_corpus(
+        ids,
+        paths,
+        lemmatize=True,
+        remove_stopwords=True,
+        nlp=nlp,
+        upos_tags={"NOUN"},
+    )
+    corpus.to_csv(
+        os.path.join(args.dest, "nouns_lemmatized_without_stopwords.csv")
+    )
 
     print("DONE")
 
