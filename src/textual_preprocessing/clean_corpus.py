@@ -240,8 +240,6 @@ def main() -> None:
         ids, paths, lemmatize=True, remove_stopwords=True, nlp=nlp
     )
     corpus.to_csv(os.path.join(args.dest, "lemmatized_without_stopwords.csv"))
-
-    corpus.to_csv(os.path.join(args.dest, "lemmatized_with_stopwords.csv"))
     print(" 5. Lemmatized without stopwords, nouns only.")
     corpus = clean_corpus(
         ids,
@@ -253,6 +251,18 @@ def main() -> None:
     )
     corpus.to_csv(
         os.path.join(args.dest, "nouns_lemmatized_without_stopwords.csv")
+    )
+    print(" 6. Lemmatized without stopwords, verbs only.")
+    corpus = clean_corpus(
+        ids,
+        paths,
+        lemmatize=True,
+        remove_stopwords=True,
+        nlp=nlp,
+        upos_tags={"VERB"},
+    )
+    corpus.to_csv(
+        os.path.join(args.dest, "verbs_lemmatized_without_stopwords.csv")
     )
 
     print("DONE")

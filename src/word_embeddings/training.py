@@ -1,4 +1,5 @@
 import os
+import unicodedata
 from pathlib import Path
 from typing import Iterable
 
@@ -50,6 +51,16 @@ GROUPS = [
 ]
 
 
+def deaccent(text):
+    """Remove letter accents from the given string."""
+    if not isinstance(text, str):
+        # assume utf8 for byte strings, use default (strict) error handling
+        text = text.decode("utf8")
+    norm = unicodedata.normalize("NFD", text)
+    result = "".join(ch for ch in norm if unicodedata.category(ch) != "Mn")
+    return unicodedata.normalize("NFC", result)
+
+
 def filter_works(
     data: pd.DataFrame, value: tuple[str], column: str
 ) -> pd.DataFrame:
@@ -69,6 +80,8 @@ def fetch_metadata(url: str) -> pd.DataFrame:
 def get_sentences(texts: Iterable[str]) -> list[str]:
     sentences = []
     for text in texts:
+        # Deaccenting text
+        text = deaccent(text)
         for line in text.split("\n"):
             sentences.append(line.split())
     return sentences
