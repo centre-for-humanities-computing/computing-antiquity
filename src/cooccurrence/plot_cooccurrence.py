@@ -4,6 +4,7 @@ from pathlib import Path
 import networkx as nx
 import numpy as np
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 
 
@@ -88,6 +89,16 @@ def plot_network(graph: nx.Graph) -> go.Figure:
     return fig
 
 
+def plot_heatmap(graph: nx.Graph) -> go.Figure:
+    node_names = list(graph.nodes)
+    adjacency = pd.DataFrame(
+        nx.adjacency_matrix(graph).todense(),
+        columns=node_names,
+        index=node_names,
+    )
+    return px.imshow(adjacency).update_xaxes(side="top")
+
+
 FILES_PATTERN = "dat/greek/models/cooccurrance/*.xlsx"
 
 
@@ -102,6 +113,11 @@ def main():
         figure.update_layout(title=title)
         figure.write_image(
             f"figures/collocations/{out_name}_network.png", scale=2.5
+        )
+        figure = plot_heatmap(graph)
+        figure.update_layout(title=title)
+        figure.write_image(
+            f"figures/collocations/{out_name}_heatmap.png", scale=2.5
         )
 
 
