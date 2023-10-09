@@ -38,7 +38,8 @@ def main():
         model = GloVe(vector_size=50, window_size=15, iter=25)
         model.train(corpus)
         print("Saving.")
-        model.wv.save(str(out_dir.joinpath(f"{author}.kv")))
+        out_filename = f"Author - {author} - Glove.gensim"
+        model.wv.save(str(out_dir.joinpath(out_filename)))
     print("DONE")
 
 
