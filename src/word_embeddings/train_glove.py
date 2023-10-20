@@ -48,8 +48,9 @@ def main():
         model.train(corpus)
         print("Saving.")
         value_name = value.replace("/", "-")
-        out_filename = f"{column} - {value_name} - Glove.gensim"
-        model.wv.save(str(out_dir.joinpath(out_filename)))
+        out_model_dir = out_dir.joinpath(f"{column} - {value_name} - Glove")
+        out_model_dir.mkdir(exist_ok=True)
+        model.wv.save(str(out_model_dir.joinpath("model.gensim")))
     print("DONE")
 
 
